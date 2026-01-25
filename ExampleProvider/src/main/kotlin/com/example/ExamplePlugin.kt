@@ -12,7 +12,7 @@ class ExamplePlugin: Plugin() {
     override fun load(context: Context) {
         activity = context as? AppCompatActivity
 
-        // All providers should be added in this manner
+        // All providers should be ad ded in this manner
         registerMainAPI(ExampleProvider())
 
         openSettings = {
