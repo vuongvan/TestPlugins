@@ -3,14 +3,13 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 
 class ExampleProvider : MainAPI() {
     override var mainUrl = "https://phim.nguonc.com"
-    override var name = "NguonC"
+    override var name = "ExampleProvider"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
 
-    // 1. Trang chủ: Lấy danh sách phim mới
+    // 1. Lấy danh sách phim mới từ API trang chủ
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         val url = "$mainUrl/api/films/phim-moi-cap-nhat?page=$page"
         val response = app.get(url).text
@@ -25,7 +24,7 @@ class ExampleProvider : MainAPI() {
         return newHomePageResponse("Phim Mới Cập Nhật", homeItems)
     }
 
-    // 2. Tìm kiếm (Sử dụng API search của NguonC nếu có, ở đây dùng tạm logic page)
+    // 2. Tìm kiếm phim
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/api/films/danh-sach/phim-moi?keyword=$query"
         val response = app.get(url).text
@@ -38,7 +37,7 @@ class ExampleProvider : MainAPI() {
         } ?: emptyList()
     }
 
-    // 3. Chi tiết phim và danh sách tập
+    // 3. Chi tiết phim và danh sách tập (Sử dụng newEpisode và seasonName mới)
     override suspend fun load(url: String): LoadResponse? {
         val apiUrl = "$mainUrl/api/film/$url"
         val response = app.get(apiUrl).text
@@ -47,44 +46,39 @@ class ExampleProvider : MainAPI() {
 
         val episodes = data.episodes?.flatMap { server ->
             server.items.map { ep ->
-                Episode(
-                    data = ep.embed, // Gửi link embed vào loadLinks để xử lý
-                    name = ep.name,
-                    headerName = server.server_name
-                )
+                newEpisode(ep.embed) {
+                    this.name = ep.name
+                    this.seasonName = server.server_name // Dùng để phân chia Tab server
+                }
             }
         } ?: emptyList()
 
         return newTvSeriesLoadResponse(movie.name, url, TvType.TvSeries, episodes) {
             this.posterUrl = movie.poster_url ?: movie.thumb_url
-            this.plot = movie.description?.replace(Regex("<[^>]*>"), "") // Xóa tag HTML nếu có
+            this.plot = movie.description?.replace(Regex("<[^>]*>"), "")
             this.year = movie.created?.substringBefore("-")?.toIntOrNull()
         }
     }
 
-    // 4. Xử lý link Embed (Giải quyết vấn đề link m3u8 trong JSON bị lỗi)
+    // 4. Lấy link video (Sử dụng newExtractorLink mới)
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // 'data' là link embed, ví dụ: https://embed.streamc.xyz/embed.php?hash=...
-        
-        // Gọi lên trang embed kèm Referer của web gốc để tránh 403
+        // Gọi trang embed để lấy link m3u8 thật
         val embedResponse = app.get(data, referer = "$mainUrl/").text
-
-        // Dùng Regex lấy link m3u8 thật sự trong script của trang embed
         val m3u8Regex = Regex("""file:\s*"([^"]+\.m3u8)"""")
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
             callback.invoke(
-                ExtractorLink(
-                    source = "NguonC (StreamC)",
+                newExtractorLink(
+                    source = "NguonC",
                     name = "Mộc Player",
                     url = finalUrl,
-                    referer = "https://embed.streamc.xyz/", // Header quan trọng nhất để chạy video
+                    referer = "https://embed.streamc.xyz/",
                     quality = Qualities.P1080.value,
                     isM3u8 = true
                 )
@@ -95,7 +89,7 @@ class ExampleProvider : MainAPI() {
         return false
     }
 
-    // --- CẤU TRÚC DỮ LIỆU JSON ---
+    // --- CẤU TRÚC DỮ LIỆU ---
 
     data class NguonCPageResponse(
         val items: List<NguonCMovieItem>?
