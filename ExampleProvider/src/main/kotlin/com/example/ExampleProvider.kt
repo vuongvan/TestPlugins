@@ -56,8 +56,6 @@ class ExampleProvider : MainAPI() {
         }
     }
 
-    // Dùng Suppress ở đây để bỏ qua lỗi build do warning 'deprecated'
-    @Suppress("DEPRECATION")
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -69,16 +67,23 @@ class ExampleProvider : MainAPI() {
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
-            // Chúng ta dùng constructor trực tiếp thay vì builder để gán được 'val'
-            val link = ExtractorLink(
-                source = "NguonC",
-                name = "Mộc Player",
-                url = finalUrl,
+            // 1. Dùng newExtractorLink để tạo object cơ bản (3 tham số bắt buộc + null cho type)
+            val baseLink = newExtractorLink(
+                "NguonC",
+                "Mộc Player",
+                finalUrl,
+                null
+            )
+
+            // 2. Dùng .copy() để ghi đè các giá trị 'val' (referer, quality, isM3u8)
+            // Đây là cách chuẩn nhất để "sửa" val trong Kotlin mà không bị lỗi reassigned
+            val finalLink = baseLink.copy(
                 referer = "https://embed.streamc.xyz/",
                 quality = Qualities.P1080.value,
                 isM3u8 = true
             )
-            callback.invoke(link)
+
+            callback.invoke(finalLink)
             return true
         }
 
