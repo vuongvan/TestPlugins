@@ -43,7 +43,6 @@ class ExampleProvider : MainAPI() {
 
         val episodes = data.episodes?.flatMap { server ->
             server.items.map { ep ->
-                // Sửa lỗi seasonName bằng cách đưa tên server vào tên tập nếu cần
                 newEpisode(ep.embed) {
                     this.name = "${server.server_name}: ${ep.name}"
                 }
@@ -68,21 +67,21 @@ class ExampleProvider : MainAPI() {
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
-            // Sử dụng Suppress để dùng Constructor chuẩn, tránh lỗi tham số của newExtractorLink
+            // Sử dụng positional arguments theo đúng thứ tự trong lỗi báo:
+            // source, name, url, referer, quality, isM3u8
             @Suppress("DEPRECATION")
             callback.invoke(
                 ExtractorLink(
-                    source = "NguonC",
-                    name = "Mộc Player",
-                    url = finalUrl,
-                    referer = "https://embed.streamc.xyz/",
-                    quality = Qualities.P1080.value,
-                    isM3u8 = true
+                    "NguonC",
+                    "Mộc Player",
+                    finalUrl,
+                    "https://embed.streamc.xyz/",
+                    Qualities.P1080.value,
+                    true
                 )
             )
             return true
         }
-
         return false
     }
 
