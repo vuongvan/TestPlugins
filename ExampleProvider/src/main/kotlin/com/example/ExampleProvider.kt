@@ -67,17 +67,17 @@ class ExampleProvider : MainAPI() {
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
-            // Sử dụng newExtractorLink với tham số theo đúng thứ tự:
-            // source, name, url, referer, quality, isM3u8
+            // Sửa lỗi: Đưa referer, quality, isM3u8 vào trong block {}
             callback.invoke(
                 newExtractorLink(
                     "NguonC",
                     "Mộc Player",
-                    finalUrl,
-                    "https://embed.streamc.xyz/",
-                    Qualities.P1080.value,
-                    true
-                )
+                    finalUrl
+                ) {
+                    this.referer = "https://embed.streamc.xyz/"
+                    this.quality = Qualities.P1080.value
+                    this.isM3u8 = true
+                }
             )
             return true
         }
@@ -85,7 +85,7 @@ class ExampleProvider : MainAPI() {
         return false
     }
 
-    // --- DỮ LIỆU JSON ---
+    // --- DATA CLASSES ---
     data class NguonCPageResponse(val items: List<NguonCMovieItem>?)
     data class NguonCMovieItem(val name: String, val slug: String, val thumb_url: String)
     data class NguonCDetailResponse(val movie: NguonCMovieDetail?, val episodes: List<NguonCServer>?)
