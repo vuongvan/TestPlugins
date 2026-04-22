@@ -9,7 +9,6 @@ class ExampleProvider : MainAPI() {
     override var name = "ExampleProvider"
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries, TvType.Anime)
 
-    // 1. Lấy danh sách phim mới từ API trang chủ
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         val url = "$mainUrl/api/films/phim-moi-cap-nhat?page=$page"
         val response = app.get(url).text
@@ -24,7 +23,6 @@ class ExampleProvider : MainAPI() {
         return newHomePageResponse("Phim Mới Cập Nhật", homeItems)
     }
 
-    // 2. Tìm kiếm phim
     override suspend fun search(query: String): List<SearchResponse> {
         val url = "$mainUrl/api/films/danh-sach/phim-moi?keyword=$query"
         val response = app.get(url).text
@@ -37,7 +35,6 @@ class ExampleProvider : MainAPI() {
         } ?: emptyList()
     }
 
-    // 3. Chi tiết phim và danh sách tập (Sử dụng newEpisode và seasonName mới)
     override suspend fun load(url: String): LoadResponse? {
         val apiUrl = "$mainUrl/api/film/$url"
         val response = app.get(apiUrl).text
@@ -46,9 +43,9 @@ class ExampleProvider : MainAPI() {
 
         val episodes = data.episodes?.flatMap { server ->
             server.items.map { ep ->
+                // Sửa lỗi seasonName bằng cách đưa tên server vào tên tập nếu cần
                 newEpisode(ep.embed) {
-                    this.name = ep.name
-                    this.seasonName = server.server_name // Dùng để phân chia Tab server
+                    this.name = "${server.server_name}: ${ep.name}"
                 }
             }
         } ?: emptyList()
@@ -60,21 +57,21 @@ class ExampleProvider : MainAPI() {
         }
     }
 
-    // 4. Lấy link video (Sử dụng newExtractorLink mới)
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // Gọi trang embed để lấy link m3u8 thật
         val embedResponse = app.get(data, referer = "$mainUrl/").text
         val m3u8Regex = Regex("""file:\s*"([^"]+\.m3u8)"""")
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
+            // Sử dụng Suppress để dùng Constructor chuẩn, tránh lỗi tham số của newExtractorLink
+            @Suppress("DEPRECATION")
             callback.invoke(
-                newExtractorLink(
+                ExtractorLink(
                     source = "NguonC",
                     name = "Mộc Player",
                     url = finalUrl,
@@ -89,39 +86,12 @@ class ExampleProvider : MainAPI() {
         return false
     }
 
-    // --- CẤU TRÚC DỮ LIỆU ---
-
-    data class NguonCPageResponse(
-        val items: List<NguonCMovieItem>?
-    )
-
-    data class NguonCMovieItem(
-        val name: String,
-        val slug: String,
-        val thumb_url: String
-    )
-
-    data class NguonCDetailResponse(
-        val movie: NguonCMovieDetail?,
-        val episodes: List<NguonCServer>?
-    )
-
-    data class NguonCMovieDetail(
-        val name: String,
-        val description: String?,
-        val thumb_url: String,
-        val poster_url: String?,
-        val created: String?
-    )
-
-    data class NguonCServer(
-        val server_name: String,
-        val items: List<NguonCEpisodeItem>
-    )
-
-    data class NguonCEpisodeItem(
-        val name: String,
-        val embed: String
-    )
+    // --- DATA CLASSES ---
+    data class NguonCPageResponse(val items: List<NguonCMovieItem>?)
+    data class NguonCMovieItem(val name: String, val slug: String, val thumb_url: String)
+    data class NguonCDetailResponse(val movie: NguonCMovieDetail?, val episodes: List<NguonCServer>?)
+    data class NguonCMovieDetail(val name: String, val description: String?, val thumb_url: String, val poster_url: String?, val created: String?)
+    data class NguonCServer(val server_name: String, val items: List<NguonCEpisodeItem>)
+    data class NguonCEpisodeItem(val name: String, val embed: String)
                               }
                               
