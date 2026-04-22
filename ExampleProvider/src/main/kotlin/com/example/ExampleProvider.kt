@@ -67,11 +67,10 @@ class ExampleProvider : MainAPI() {
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
-            // Sử dụng positional arguments theo đúng thứ tự trong lỗi báo:
+            // Sử dụng newExtractorLink với tham số theo đúng thứ tự:
             // source, name, url, referer, quality, isM3u8
-            @Suppress("DEPRECATION")
             callback.invoke(
-                ExtractorLink(
+                newExtractorLink(
                     "NguonC",
                     "Mộc Player",
                     finalUrl,
@@ -82,10 +81,11 @@ class ExampleProvider : MainAPI() {
             )
             return true
         }
+
         return false
     }
 
-    // --- DATA CLASSES ---
+    // --- DỮ LIỆU JSON ---
     data class NguonCPageResponse(val items: List<NguonCMovieItem>?)
     data class NguonCMovieItem(val name: String, val slug: String, val thumb_url: String)
     data class NguonCDetailResponse(val movie: NguonCMovieDetail?, val episodes: List<NguonCServer>?)
