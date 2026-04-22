@@ -56,6 +56,8 @@ class ExampleProvider : MainAPI() {
         }
     }
 
+    // Dùng Suppress ở đây để bỏ qua lỗi build do warning 'deprecated'
+    @Suppress("DEPRECATION")
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
@@ -67,18 +69,16 @@ class ExampleProvider : MainAPI() {
         val finalUrl = m3u8Regex.find(embedResponse)?.groupValues?.get(1)
 
         if (finalUrl != null) {
-            // Sửa lỗi: Đưa referer, quality, isM3u8 vào trong block {}
-            callback.invoke(
-                newExtractorLink(
-                    "NguonC",
-                    "Mộc Player",
-                    finalUrl
-                ) {
-                    this.referer = "https://embed.streamc.xyz/"
-                    this.quality = Qualities.P1080.value
-                    this.isM3u8 = true
-                }
+            // Chúng ta dùng constructor trực tiếp thay vì builder để gán được 'val'
+            val link = ExtractorLink(
+                source = "NguonC",
+                name = "Mộc Player",
+                url = finalUrl,
+                referer = "https://embed.streamc.xyz/",
+                quality = Qualities.P1080.value,
+                isM3u8 = true
             )
+            callback.invoke(link)
             return true
         }
 
